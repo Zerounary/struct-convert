@@ -13,7 +13,8 @@ struct MetaOpts {
 #[derive(Debug, Default, FromField)]
 #[darling(default, attributes(convert_field))]
 struct FiledOpts {
-    rename: String
+    rename: String,
+    to_string: bool,
 }
 
 struct Fd {
@@ -79,6 +80,12 @@ impl DeriveIntoContext {
                 if *optional {
                     return quote! {
                         #target_name: s.#name.take()
+                    };
+                }
+
+                if opts.to_string {
+                    return quote! {
+                        #target_name: s.#name.to_string()
                     };
                 }
 
