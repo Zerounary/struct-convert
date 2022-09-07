@@ -2,7 +2,7 @@ use darling::{FromDeriveInput, FromField};
 use proc_macro2::{TokenStream, Ident};
 use quote::quote;
 
-use syn::{DeriveInput, Type, Data, DataStruct, FieldsNamed, Fields, Field, GenericArgument, Path, TypePath};
+use syn::{DeriveInput, Type, Data, DataStruct, FieldsNamed, Fields, Field, GenericArgument, Path, TypePath, Expr};
 
 #[derive(Debug, Default, FromDeriveInput)]
 #[darling(default, attributes(convert_into))]
@@ -14,6 +14,7 @@ struct MetaOpts {
 #[darling(default, attributes(convert_field))]
 struct FiledOpts {
     rename: String,
+    unwrap: bool,
     to_string: bool,
 }
 
@@ -77,9 +78,9 @@ impl DeriveIntoContext {
                     Ident::new(opts.rename.as_str(), name.span())
                 };
 
-                if *optional {
+                if *optional && opts.unwrap {
                     return quote! {
-                        #target_name: s.#name.take()
+                        #target_name: s.#name.unwrap()
                     };
                 }
 
