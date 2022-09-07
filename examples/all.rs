@@ -19,6 +19,10 @@ struct B {
 #[derive(Debug, Default, Convert, PartialEq)]
 #[convert_into(into = "B")]
 struct A {
+
+    #[convert_field(ignore)]
+    ignore_f: i64,
+
     #[convert_field(rename = "bid")]
     id: i64,
 
@@ -55,6 +59,7 @@ fn main() {
         },
         opt_str: String::from("str"),
         opt_str2: Some(String::from("Option")),
+        ignore_f: 1,
     };
     let b: B = a.into();
     debug_assert_eq!(
