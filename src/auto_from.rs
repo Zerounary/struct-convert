@@ -14,6 +14,7 @@ struct MetaOpts {
 #[darling(default, attributes(convert_field))]
 struct FiledOpts {
     rename: String,
+    ignore: bool,
     unwrap: bool,
     option: bool,
     to_string: bool,
@@ -60,7 +61,7 @@ impl DeriveIntoContext {
         impl std::convert::From<#struct_name> for #target_name {
           fn from(s: #struct_name) -> Self {
               #target_name {
-                #(#assigns,)*
+                #(#assigns)*
                 ..#target_name::default()
               }
           }
@@ -79,32 +80,36 @@ impl DeriveIntoContext {
                     Ident::new(opts.rename.as_str(), name.span())
                 };
 
+                if opts.ignore {
+                    return quote!()
+                }
+
                 if *optional && opts.unwrap {
                     return quote! {
-                        #target_name: s.#name.unwrap_or_default()
+                        #target_name: s.#name.unwrap_or_default(),
                     };
                 }
 
                 if opts.option {
                     if *optional {
                         return quote! {
-                            #target_name: s.#name
+                            #target_name: s.#name,
                         };
                     }else {
                         return quote! {
-                            #target_name: Some(s.#name)
+                            #target_name: Some(s.#name),
                         };
                     }
                 }
 
                 if opts.to_string {
                     return quote! {
-                        #target_name: s.#name.to_string()
+                        #target_name: s.#name.to_string(),
                     };
                 }
 
                 quote! {
-                    #target_name: s.#name.into()
+                    #target_name: s.#name.into(),
                 }
             })
             .collect()
