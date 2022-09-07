@@ -98,7 +98,6 @@ impl From<DeriveInput> for DeriveIntoContext {
                 panic!("not args");
             }
         };
-        println!("{:#?}", attrs);
         let name = input.ident;
 
         let fields = if let Data::Struct(DataStruct {
