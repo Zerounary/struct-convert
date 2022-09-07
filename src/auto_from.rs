@@ -8,7 +8,7 @@ use syn::{
 };
 
 #[derive(Debug, Default, FromDeriveInput)]
-#[darling(default, attributes(convert_into))]
+#[darling(default, attributes(convert))]
 struct MetaOpts {
     into: String,
     from: String,

@@ -1,13 +1,13 @@
 use struct_convert::Convert;
 
 #[derive(Debug, Default, Convert, PartialEq)]
-#[convert_into(from = "AInner")]
+#[convert(from = "AInner")]
 struct BInner {
     name: String,
 }
 
 #[derive(Debug, Default, Convert, PartialEq)]
-#[convert_into(from = "A")]
+#[convert(from = "A")]
 struct B {
 
     #[convert_field(rename = "id")]

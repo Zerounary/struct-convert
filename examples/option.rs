@@ -14,7 +14,7 @@ struct B {
 }
 
 #[derive(Debug, Default, Convert, PartialEq)]
-#[convert_into(into = "B")]
+#[convert(into = "B")]
 struct A {
     #[convert_field(unwrap)]
     name: Option<String>,
@@ -30,7 +30,7 @@ struct A {
 }
 
 #[derive(Debug, Default, Convert, PartialEq)]
-#[convert_into(into = "BInner")]
+#[convert(into = "BInner")]
 struct AInner {
     name: String,
 }

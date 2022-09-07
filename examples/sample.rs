@@ -8,7 +8,7 @@ struct B {
 }
 
 #[derive(Debug, Default, Convert, PartialEq)]
-#[convert_into(into = "B")]
+#[convert(into = "B")]
 struct A {
     #[convert_field(rename = "bid")]
     id: i64,

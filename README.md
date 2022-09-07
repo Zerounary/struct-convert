@@ -17,7 +17,7 @@ struct B {
 }
 
 #[derive(Debug, Default, Convert, PartialEq)]
-#[convert_into(into = "B")]
+#[convert(into = "B")]
 struct A {
     #[convert_field(rename = "bid")]
     id: i64,
@@ -64,7 +64,7 @@ struct B {
 }
 
 #[derive(Debug, Default, Convert, PartialEq)]
-#[convert_into(into = "B")]
+#[convert(into = "B")]
 struct A {
     #[convert_field(rename = "bid")]
     id: i64,
@@ -73,7 +73,7 @@ struct A {
 }
 
 #[derive(Debug, Default, Convert, PartialEq)]
-#[convert_into(into = "BInner")]
+#[convert(into = "BInner")]
 struct AInner {
     name: String,
 }
@@ -117,7 +117,7 @@ struct B {
 }
 
 #[derive(Debug, Default, Convert, PartialEq)]
-#[convert_into(into = "B")]
+#[convert(into = "B")]
 struct A {
     #[convert_field(unwrap)]
     name: Option<String>,
@@ -133,7 +133,7 @@ struct A {
 }
 
 #[derive(Debug, Default, Convert, PartialEq)]
-#[convert_into(into = "BInner")]
+#[convert(into = "BInner")]
 struct AInner {
     name: String,
 }
@@ -170,7 +170,7 @@ struct B {
 }
 
 #[derive(Debug, Default, Convert, PartialEq)]
-#[convert_into(into = "B")]
+#[convert(into = "B")]
 struct A {
     #[convert_field(ignore)]
     id: i64,
@@ -193,6 +193,84 @@ fn main() {
         B {
             num: "1".to_string(),
             name: "Jack".to_string(),
+        },
+        b
+    );
+}
+```
+
+
+convert B from  A
+```rust
+use struct_convert::Convert;
+
+#[derive(Debug, Default, Convert, PartialEq)]
+#[convert(from = "AInner")]
+struct BInner {
+    name: String,
+}
+
+#[derive(Debug, Default, Convert, PartialEq)]
+#[convert(from = "A")]
+struct B {
+
+    #[convert_field(rename = "id")]
+    bid: i64,
+
+    #[convert_field(to_string)]
+    num: String,
+
+    #[convert_field(unwrap)]
+    name: String,
+
+    inner: BInner,
+
+    #[convert_field(wrap)]
+    opt_str: Option<String>,
+
+    opt_str2: Option<String>
+}
+
+#[derive(Debug, Default,  PartialEq)]
+struct A {
+    ignore_f: i64,
+    id: i64,
+    num: i64,
+    name: Option<String>,
+    inner: AInner,
+    opt_str: String,
+    opt_str2: Option<String>,
+}
+
+
+#[derive(Debug, Default, PartialEq)]
+struct AInner {
+    name: String,
+}
+
+fn main() {
+    let a = A {
+        id: 2,
+        num: 1,
+        name: Some("Jack".to_string()),
+        inner: AInner {
+            name: String::from("AInner"),
+        },
+        opt_str: String::from("str"),
+        opt_str2: Some(String::from("Option")),
+        ignore_f: 1,
+    };
+    let b: B = a.into();
+    debug_assert_eq!(
+        B {
+            num: "1".to_string(),
+            bid: 2,
+            name: "Jack".to_string(),
+            inner: BInner {
+                name: String::from("AInner")
+            },
+            opt_str: Some(String::from("str")),
+            opt_str2: Some(String::from("Option"))
         },
         b
     );
