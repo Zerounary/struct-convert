@@ -15,6 +15,7 @@ struct MetaOpts {
 struct FiledOpts {
     rename: String,
     unwrap: bool,
+    option: bool,
     to_string: bool,
 }
 
@@ -80,8 +81,20 @@ impl DeriveIntoContext {
 
                 if *optional && opts.unwrap {
                     return quote! {
-                        #target_name: s.#name.unwrap()
+                        #target_name: s.#name.unwrap_or_default()
                     };
+                }
+
+                if opts.option {
+                    if *optional {
+                        return quote! {
+                            #target_name: s.#name
+                        };
+                    }else {
+                        return quote! {
+                            #target_name: Some(s.#name)
+                        };
+                    }
                 }
 
                 if opts.to_string {
