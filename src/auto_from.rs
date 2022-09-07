@@ -1,13 +1,17 @@
 use darling::{FromDeriveInput, FromField};
-use proc_macro2::{TokenStream, Ident};
+use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
-use syn::{DeriveInput, Type, Data, DataStruct, FieldsNamed, Fields, Field, GenericArgument, Path, TypePath, Expr};
+use syn::{
+    Data, DataStruct, DeriveInput, Expr, Field, Fields, FieldsNamed, GenericArgument, Path, Type,
+    TypePath,
+};
 
 #[derive(Debug, Default, FromDeriveInput)]
 #[darling(default, attributes(convert_into))]
 struct MetaOpts {
-    into: String
+    into: String,
+    from: String,
 }
 
 #[derive(Debug, Default, FromField)]
@@ -15,16 +19,17 @@ struct MetaOpts {
 struct FiledOpts {
     rename: String,
     ignore: bool,
+    wrap: bool,
     unwrap: bool,
     option: bool,
     to_string: bool,
 }
 
 struct Fd {
-  name: Ident,
-  opts: FiledOpts,
-  ty: Type,
-  optional: bool
+    name: Ident,
+    opts: FiledOpts,
+    ty: Type,
+    optional: bool,
 }
 /// 把一个 Field 转换成 Fd
 impl From<Field> for Fd {
@@ -42,76 +47,144 @@ impl From<Field> for Fd {
 }
 
 pub struct DeriveIntoContext {
-  name: Ident,
-  attrs: MetaOpts, 
-  fields: Vec<Fd>
+    name: Ident,
+    attrs: MetaOpts,
+    fields: Vec<Fd>,
 }
 
-
 impl DeriveIntoContext {
-    
     pub fn render(&self) -> TokenStream {
-      let name = &self.name;
-      let struct_name = Ident::new(&format!("{}",name), name.span());
-      let target_name = Ident::new(&format!("{}", self.attrs.into), name.span());
+        let name = &self.name;
+        let is_from = !self.attrs.from.is_empty();
 
-      let assigns = self.gen_assigns();
+        if is_from {
+            let struct_name = Ident::new(&format!("{}", name), name.span());
+            let source_name = Ident::new(&format!("{}", self.attrs.from), name.span());
 
-      quote!{
-        impl std::convert::From<#struct_name> for #target_name {
-          fn from(s: #struct_name) -> Self {
-              #target_name {
-                #(#assigns)*
-                ..#target_name::default()
-              }
-          }
-        }
-      }
-    }
+            let assigns = self.gen_from_assigns();
 
-        // 比如：#field_name: self.#field_name.take().ok_or(" xxx need to be set!")
-    fn gen_assigns(&self) -> Vec<TokenStream> {
-        self.fields
-            .iter()
-            .map(|Fd { name, optional, opts, ..}| {
-                let target_name: Ident = if opts.rename.is_empty() {
-                    name.clone()
-                }else {
-                    Ident::new(opts.rename.as_str(), name.span())
-                };
-
-                if opts.ignore {
-                    return quote!()
-                }
-
-                if *optional && opts.unwrap {
-                    return quote! {
-                        #target_name: s.#name.unwrap_or_default(),
-                    };
-                }
-
-                if opts.option {
-                    if *optional {
-                        return quote! {
-                            #target_name: s.#name,
-                        };
-                    }else {
-                        return quote! {
-                            #target_name: Some(s.#name),
-                        };
+            quote! {
+                impl std::convert::From<#source_name> for #struct_name {
+                    fn from(s: #source_name) -> Self {
+                        #struct_name {
+                        #(#assigns)*
+                        ..#struct_name::default()
+                        }
                     }
                 }
+            }
+        }else {
+            let struct_name = Ident::new(&format!("{}", name), name.span());
+            let target_name = Ident::new(&format!("{}", self.attrs.into), name.span());
 
-                if opts.to_string {
-                    return quote! {
-                        #target_name: s.#name.to_string(),
+            let assigns = self.gen_into_assigns();
+
+            quote! {
+                impl std::convert::From<#struct_name> for #target_name {
+                    fn from(s: #struct_name) -> Self {
+                        #target_name {
+                        #(#assigns)*
+                        ..#target_name::default()
+                        }
+                    }
+                }
+            }
+        }
+
+    }
+
+        fn gen_from_assigns(&self) -> Vec<TokenStream> {
+        self.fields
+            .iter()
+            .map(
+                |Fd {
+                     name,
+                     optional,
+                     opts,
+                     ..
+                 }| {
+                    let source_name: Ident = if opts.rename.is_empty() {
+                        name.clone()
+                    } else {
+                        Ident::new(opts.rename.as_str(), name.span())
                     };
-                }
 
-                quote! {
-                    #target_name: s.#name.into(),
-                }
-            })
+                    if opts.unwrap {
+                        return quote! {
+                            #name: s.#source_name.unwrap_or_default(),
+                        };
+                    }
+
+                    if *optional && opts.wrap {
+                        return quote! {
+                            #name: Some(s.#source_name),
+                        };
+                    }
+
+                    if opts.to_string {
+                        return quote! {
+                            #name: s.#source_name.to_string(),
+                        };
+                    }
+
+                    quote! {
+                        #name: s.#source_name.into(),
+                    }
+                },
+            )
+            .collect()
+    }
+
+    // 比如：#field_name: self.#field_name.take().ok_or(" xxx need to be set!")
+    fn gen_into_assigns(&self) -> Vec<TokenStream> {
+        self.fields
+            .iter()
+            .map(
+                |Fd {
+                     name,
+                     optional,
+                     opts,
+                     ..
+                 }| {
+                    let target_name: Ident = if opts.rename.is_empty() {
+                        name.clone()
+                    } else {
+                        Ident::new(opts.rename.as_str(), name.span())
+                    };
+
+                    if opts.ignore {
+                        return quote!();
+                    }
+
+                    if *optional && opts.unwrap {
+                        return quote! {
+                            #target_name: s.#name.unwrap_or_default(),
+                        };
+                    }
+
+                    if opts.option {
+                        if *optional {
+                            return quote! {
+                                #target_name: s.#name,
+                            };
+                        } else {
+                            return quote! {
+                                #target_name: Some(s.#name),
+                            };
+                        }
+                    }
+
+                    if opts.to_string {
+                        return quote! {
+                            #target_name: s.#name.to_string(),
+                        };
+                    }
+
+                    quote! {
+                        #target_name: s.#name.into(),
+                    }
+                },
+            )
             .collect()
     }
 }
@@ -136,9 +209,12 @@ impl From<DeriveInput> for DeriveIntoContext {
             panic!("Unsupported data type");
         };
 
-
         let fds = fields.into_iter().map(Fd::from).collect();
-        Self { name, fields: fds, attrs }
+        Self {
+            name,
+            fields: fds,
+            attrs,
+        }
     }
 }
 
