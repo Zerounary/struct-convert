@@ -1,6 +1,6 @@
 [package]
 name = "struct-convert"
-version = "0.1.0" # refer to semver
+version = "0.1.1" # refer to semver
 edition = "2021"
 description = "Auto Convert between structs"
 authors = ["Zerounary <zerounary@163.com>"]
