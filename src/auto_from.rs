@@ -13,7 +13,7 @@ struct MetaOpts {
 #[derive(Debug, Default, FromField)]
 #[darling(default, attributes(convert_field))]
 struct FiledOpts {
-    name: String
+    rename: String
 }
 
 struct Fd {
@@ -70,10 +70,10 @@ impl DeriveIntoContext {
         self.fields
             .iter()
             .map(|Fd { name, optional, opts, ..}| {
-                let target_name: Ident = if opts.name.is_empty() {
+                let target_name: Ident = if opts.rename.is_empty() {
                     name.clone()
                 }else {
-                    Ident::new(opts.name.as_str(), name.span())
+                    Ident::new(opts.rename.as_str(), name.span())
                 };
 
                 if *optional {
