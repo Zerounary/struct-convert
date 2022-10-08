@@ -18,6 +18,7 @@ struct MetaOpts {
 #[darling(default, attributes(convert_field))]
 struct FiledOpts {
     rename: String,
+    custom_fn: String,
     ignore: bool,
     wrap: bool,
     unwrap: bool,
@@ -109,6 +110,13 @@ impl DeriveIntoContext {
                         Ident::new(opts.rename.as_str(), name.span())
                     };
 
+                    if !opts.custom_fn.is_empty() {
+                        let custom =  Ident::new(&opts.custom_fn.as_str(), name.span());
+                        return quote!{
+                            #name: #custom(&s),
+                        };
+                    }
+
                     if opts.unwrap {
                         return quote! {
                             #name: s.#source_name.unwrap_or_default(),
@@ -151,6 +159,13 @@ impl DeriveIntoContext {
                     } else {
                         Ident::new(opts.rename.as_str(), name.span())
                     };
+
+                    if !opts.custom_fn.is_empty() {
+                        let custom =  Ident::new(&opts.custom_fn.as_str(), name.span());
+                        return quote!{
+                            #target_name: #custom(&s),
+                        };
+                    }
 
                     if opts.ignore {
                         return quote!();
