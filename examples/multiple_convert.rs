@@ -2,14 +2,14 @@ use struct_convert::Convert;
 
 #[derive(Debug, Default, PartialEq)]
 struct B {
-    bid: i64,
+    bid: String,
     num: String,
     name: String,
 }
 
 #[derive(Debug, Default, PartialEq)]
 struct C {
-    bid: i64,
+    cid: Option<String>,
     num: String,
     name: String,
 }
@@ -18,7 +18,8 @@ struct C {
 #[convert(into = "B")]
 #[convert(into = "C")]
 struct A {
-    #[convert_field(rename = "bid")]
+    #[convert_field(class = "B", rename = "bid", to_string)]
+    #[convert_field(class = "C", rename = "cid", custom_fn = "wrap_id")]
     id: i64,
 
     #[convert_field(to_string)]
@@ -26,6 +27,10 @@ struct A {
 
     #[convert_field(unwrap)]
     name: Option<String>,
+}
+
+fn wrap_id(a: &A) -> Option<String> {
+    Some(a.id.to_string())
 }
 
 fn main() {
@@ -38,7 +43,7 @@ fn main() {
     debug_assert_eq!(
         B {
             num: "1".to_string(),
-            bid: 2,
+            bid: 2.to_string(),
             name: "Jack".to_string(),
         },
         b
@@ -48,7 +53,7 @@ fn main() {
     debug_assert_eq!(
         C {
             num: "1".to_string(),
-            bid: 2,
+            cid: Some("2".into()),
             name: "Jack".to_string(),
         },
         c

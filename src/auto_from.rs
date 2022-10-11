@@ -1,10 +1,10 @@
-use darling::{FromDeriveInput, FromField};
+use darling::{FromDeriveInput, FromField, FromAttributes};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
 use syn::{
     Data, DataStruct, DeriveInput, Field, Fields, FieldsNamed, GenericArgument, Path, Type,
-    TypePath,
+    TypePath, Attribute,
 };
 
 #[derive(Debug, Default, FromDeriveInput)]
@@ -16,9 +16,10 @@ struct MetaOpts {
     from: Vec<String>,
 }
 
-#[derive(Debug, Default, FromField)]
+#[derive(Debug, Default, Clone, FromField, FromAttributes)]
 #[darling(default, attributes(convert_field))]
 struct FiledOpts {
+    class: String,
     rename: String,
     custom_fn: String,
     ignore: bool,
@@ -28,9 +29,12 @@ struct FiledOpts {
     to_string: bool,
 }
 
+#[derive(Clone, Debug)]
 struct Fd {
     name: Ident,
     opts: FiledOpts,
+    multi_opts: Vec<FiledOpts>,
+    multiple: bool,
     optional: bool,
 }
 /// 把一个 Field 转换成 Fd
@@ -38,15 +42,43 @@ impl From<Field> for Fd {
     fn from(f: Field) -> Self {
         let (optional, _) = get_option_inner(&f.ty);
         let opts = FiledOpts::from_field(&f).unwrap_or_default();
+        let multi_opts = parse_attrs(&f.attrs);
         Self {
             // 此时，我们拿到的是 NamedFields，所以 ident 必然存在
             name: f.ident.unwrap(),
             optional,
             opts,
+            multi_opts,
+            multiple: f.attrs.len() > 1
         }
     }
 }
 
+impl Fd {
+    fn get_by_name(&self, name: String) -> FiledOpts {
+        for opt in self.multi_opts.iter().filter(|o| o.class.eq(&name)) {
+            return opt.clone();
+        }
+        panic!("not found opts {:}", name)
+    }
+}
+
+fn parse_attrs(attrs: &[Attribute]) -> Vec<FiledOpts> {
+    let mut result = vec![];
+    for attr in attrs.iter().filter(|attr| attr.path.is_ident("convert_field")) {
+        match FiledOpts::from_attributes(&[attr.clone().into()]) {
+            Ok(f) => {
+                result.push(f);
+            },
+            Err(e) => {
+                panic!("{:?}", e)
+            }
+        }
+    }
+    result
+}
+
+#[derive(Debug)]
 pub struct DeriveIntoContext {
     name: Ident,
     attrs: MetaOpts,
@@ -63,7 +95,7 @@ impl DeriveIntoContext {
                 let struct_name = Ident::new(&format!("{}", name), name.span());
                 let source_name = Ident::new(&format!("{}", from), name.span());
 
-                let assigns = self.gen_from_assigns();
+                let assigns = self.gen_from_assigns(from.clone().to_string());
 
                 quote! {
                         impl std::convert::From<#source_name> for #struct_name {
@@ -80,8 +112,7 @@ impl DeriveIntoContext {
             TokenStream::from_iter(self.attrs.into.iter().map(|into| {
                 let struct_name = Ident::new(&format!("{}", name), name.span());
                 let target_name = Ident::new(&format!("{}", into), name.span());
-
-                let assigns = self.gen_into_assigns();
+                let assigns = self.gen_into_assigns(into.clone().to_string());
 
                 quote! {
                     impl std::convert::From<#struct_name> for #target_name {
@@ -97,16 +128,22 @@ impl DeriveIntoContext {
         }
     }
 
-    fn gen_from_assigns(&self) -> Vec<TokenStream> {
+    fn gen_from_assigns(&self, sturct_name: String) -> Vec<TokenStream> {
         self.fields
-            .iter()
+            .clone()
+            .into_iter()
             .map(
-                |Fd {
-                     name,
-                     optional,
-                     opts,
-                     ..
-                 }| {
+                |fd| {
+                    let Fd {
+                        name,
+                        optional,
+                        mut opts,
+                        multiple,
+                        ..
+                    } = fd.clone();
+                    if multiple {
+                        opts = fd.get_by_name(sturct_name.clone());
+                    }
                     let source_name: Ident = if opts.rename.is_empty() {
                         name.clone()
                     } else {
@@ -126,7 +163,7 @@ impl DeriveIntoContext {
                         };
                     }
 
-                    if *optional && opts.wrap {
+                    if optional && opts.wrap {
                         return quote! {
                             #name: Some(s.#source_name),
                         };
@@ -147,16 +184,23 @@ impl DeriveIntoContext {
     }
 
     // 比如：#field_name: self.#field_name.take().ok_or(" xxx need to be set!")
-    fn gen_into_assigns(&self) -> Vec<TokenStream> {
+    fn gen_into_assigns(&self, struct_name: String) -> Vec<TokenStream> {
         self.fields
-            .iter()
+            .clone()
+            .into_iter()
             .map(
-                |Fd {
-                     name,
-                     optional,
-                     opts,
-                     ..
-                 }| {
+                |fd| {
+                    let Fd {
+                        name,
+                        optional,
+                        mut opts,
+                        multiple,
+                        ..
+                    } = fd.clone();
+
+                    if multiple {
+                        opts = fd.get_by_name(struct_name.clone());
+                    }
                     let target_name: Ident = if opts.rename.is_empty() {
                         name.clone()
                     } else {
@@ -174,14 +218,14 @@ impl DeriveIntoContext {
                         return quote!();
                     }
 
-                    if *optional && opts.unwrap {
+                    if optional && opts.unwrap {
                         return quote! {
                             #target_name: s.#name.unwrap_or_default(),
                         };
                     }
 
                     if opts.option {
-                        if *optional {
+                        if optional {
                             return quote! {
                                 #target_name: s.#name,
                             };
