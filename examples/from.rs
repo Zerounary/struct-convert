@@ -21,6 +21,8 @@ struct B {
 
     inner: BInner,
 
+    innerList: Vec<BInner>,
+
     #[convert_field(wrap)]
     opt_str: Option<String>,
 
@@ -34,6 +36,7 @@ struct A {
     num: i64,
     name: Option<String>,
     inner: AInner,
+    innerList: Vec<AInner>,
     opt_str: String,
     opt_str2: Option<String>,
 }
@@ -52,6 +55,9 @@ fn main() {
         inner: AInner {
             name: String::from("AInner"),
         },
+        innerList: vec![AInner {
+            name: String::from("AInner"),
+        }],
         opt_str: String::from("str"),
         opt_str2: Some(String::from("Option")),
         ignore_f: 1,
@@ -65,6 +71,9 @@ fn main() {
             inner: BInner {
                 name: String::from("AInner")
             },
+            innerList: vec![BInner {
+                name: String::from("AInner"),
+            }],
             opt_str: Some(String::from("str")),
             opt_str2: Some(String::from("Option"))
         },

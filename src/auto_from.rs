@@ -36,17 +36,19 @@ struct Fd {
     multi_opts: Vec<FiledOpts>,
     multiple: bool,
     optional: bool,
+    is_vec: bool,
 }
 /// 把一个 Field 转换成 Fd
 impl From<Field> for Fd {
     fn from(f: Field) -> Self {
-        let (optional, _) = get_option_inner(&f.ty);
+        let (optional, is_vec ,_) = get_option_inner(&f.ty);
         let opts = FiledOpts::from_field(&f).unwrap_or_default();
         let multi_opts = parse_attrs(&f.attrs);
         Self {
             // 此时，我们拿到的是 NamedFields，所以 ident 必然存在
             name: f.ident.unwrap(),
             optional,
+            is_vec,
             opts,
             multi_opts,
             multiple: f.attrs.len() > 1
@@ -137,6 +139,7 @@ impl DeriveIntoContext {
                     let Fd {
                         name,
                         optional,
+                        is_vec,
                         mut opts,
                         multiple,
                         ..
@@ -175,6 +178,12 @@ impl DeriveIntoContext {
                         };
                     }
 
+                    if is_vec {
+                        return quote! {
+                            #name: s.#source_name.into_iter().map(|a| a.into()).collect(),
+                        };
+                    }
+
                     quote! {
                         #name: s.#source_name.into(),
                     }
@@ -193,6 +202,7 @@ impl DeriveIntoContext {
                     let Fd {
                         name,
                         optional,
+                        is_vec,
                         mut opts,
                         multiple,
                         ..
@@ -242,6 +252,12 @@ impl DeriveIntoContext {
                         };
                     }
 
+                    if is_vec {
+                        return quote! {
+                            #target_name: s.#name.into_iter().map(|a| a.into()).collect(),
+                        };
+                    }
+
                     quote! {
                         #target_name: s.#name.into(),
                     }
@@ -281,7 +297,7 @@ impl From<DeriveInput> for DeriveIntoContext {
 }
 
 // 如果是 T = Option<Inner>，返回 (true, Inner)；否则返回 (false, T)
-fn get_option_inner(ty: &Type) -> (bool, &Type) {
+fn get_option_inner(ty: &Type) -> (bool, bool, &Type) {
     // 首先模式匹配出 segments
     if let Type::Path(TypePath {
         path: Path { segments, .. },
@@ -299,9 +315,21 @@ fn get_option_inner(ty: &Type) -> (bool, &Type) {
                     },
                     _ => panic!("Not sure what to do with other PathArguments"),
                 };
-                return (true, t);
+                return (true, false, t);
+            }
+            if v.ident == "Vec" {
+                // 如果 PathSegment 第一个是 Option，那么它内部应该是 AngleBracketed，比如 <T>
+                // 获取其第一个值，如果是 GenericArgument::Type，则返回
+                let t = match &v.arguments {
+                    syn::PathArguments::AngleBracketed(a) => match a.args.iter().next() {
+                        Some(GenericArgument::Type(t)) => t,
+                        _ => panic!("Not sure what to do with other GenericArgument"),
+                    },
+                    _ => panic!("Not sure what to do with other PathArguments"),
+                };
+                return (false, true, t);
             }
         }
     }
-    (false, ty)
+    (false, false, ty)
 }
