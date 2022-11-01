@@ -26,7 +26,10 @@ struct B {
     #[convert_field(wrap)]
     opt_str: Option<String>,
 
-    opt_str2: Option<String>
+    opt_str2: Option<String>,
+
+    #[convert_field(ignore)]
+    other_field: Option<String>,
 }
 
 #[derive(Debug, Default,  PartialEq)]
@@ -75,7 +78,8 @@ fn main() {
                 name: String::from("AInner"),
             }],
             opt_str: Some(String::from("str")),
-            opt_str2: Some(String::from("Option"))
+            opt_str2: Some(String::from("Option")),
+            other_field: None
         },
         b
     );

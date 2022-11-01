@@ -160,6 +160,10 @@ impl DeriveIntoContext {
                         };
                     }
 
+                    if opts.ignore {
+                        return quote!();
+                    }
+
                     if opts.unwrap {
                         return quote! {
                             #name: s.#source_name.unwrap_or_default(),
