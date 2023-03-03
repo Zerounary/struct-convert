@@ -11,7 +11,7 @@ use struct_convert::Convert;
 
 use crate::some_mod::Remote;
 
-#[derive(Default, Convert)]
+#[derive(Convert)]
 #[convert(from = "Remote")]
 #[convert(from = "C")]
 #[convert(into = "B")]
@@ -51,18 +51,18 @@ Inner stuct convert.
 ```rust
 use struct_convert::Convert;
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, PartialEq)]
 struct BInner {
     name: String,
 }
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, PartialEq)]
 struct B {
     bid: i64,
     inner: BInner,
 }
 
-#[derive(Debug, Default, Convert, PartialEq)]
+#[derive(Debug, Convert, PartialEq)]
 #[convert(into = "B")]
 struct A {
     #[convert_field(rename = "bid")]
@@ -71,7 +71,7 @@ struct A {
     inner: AInner,
 }
 
-#[derive(Debug, Default, Convert, PartialEq)]
+#[derive(Debug, Convert, PartialEq)]
 #[convert(into = "BInner")]
 struct AInner {
     name: String,
@@ -102,12 +102,12 @@ Option field convert.
 ```rust
 use struct_convert::Convert;
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, PartialEq)]
 struct BInner {
     name: String,
 }
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, PartialEq)]
 struct B {
     name: String,
     name2: String,
@@ -115,7 +115,7 @@ struct B {
     opt_str2: Option<String>,
 }
 
-#[derive(Debug, Default, Convert, PartialEq)]
+#[derive(Debug, Convert, PartialEq)]
 #[convert(into = "B")]
 struct A {
     #[convert_field(unwrap)]
@@ -131,7 +131,7 @@ struct A {
     opt_str2: Option<String>,
 }
 
-#[derive(Debug, Default, Convert, PartialEq)]
+#[derive(Debug, Convert, PartialEq)]
 #[convert(into = "BInner")]
 struct AInner {
     name: String,
@@ -162,13 +162,13 @@ Ignore Some fileds.
 ```rust
 use struct_convert::Convert;
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, PartialEq)]
 struct B {
     num: String,
     name: String,
 }
 
-#[derive(Debug, Default, Convert, PartialEq)]
+#[derive(Debug, Convert, PartialEq)]
 #[convert(into = "B")]
 struct A {
     #[convert_field(ignore)]
@@ -203,13 +203,13 @@ convert B from  A
 ```rust
 use struct_convert::Convert;
 
-#[derive(Debug, Default, Convert, PartialEq)]
+#[derive(Debug, Convert, PartialEq)]
 #[convert(from = "AInner")]
 struct BInner {
     name: String,
 }
 
-#[derive(Debug, Default, Convert, PartialEq)]
+#[derive(Debug, Convert, PartialEq)]
 #[convert(from = "A")]
 struct B {
 
@@ -230,7 +230,7 @@ struct B {
     opt_str2: Option<String>
 }
 
-#[derive(Debug, Default,  PartialEq)]
+#[derive(Debug,  PartialEq)]
 struct A {
     ignore_f: i64,
     id: i64,
@@ -242,7 +242,7 @@ struct A {
 }
 
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, PartialEq)]
 struct AInner {
     name: String,
 }
@@ -281,26 +281,26 @@ Convert with custom function.
 ```rust
 use struct_convert::Convert;
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, PartialEq)]
 struct B {
     bid: i64,
 }
 
-#[derive(Debug, Default, Convert, PartialEq)]
+#[derive(Debug, Convert, PartialEq)]
 #[convert(into = "B")]
 struct A {
     #[convert_field(rename = "bid", custom_fn = "str_to_i64")]
     id_str: String,
 }
 
-#[derive(Debug, Default, Convert, PartialEq)]
+#[derive(Debug, Convert, PartialEq)]
 #[convert(from = "B")]
 struct C {
     #[convert_field(rename = "bid", custom_fn = "to_point")]
     point: Point,
 }
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, PartialEq)]
 struct Point(i64, i64);
 
 fn str_to_i64(a: &A) -> i64 {
