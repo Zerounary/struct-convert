@@ -10,6 +10,7 @@ use syn::{
 #[derive(Debug, Default, FromDeriveInput)]
 #[darling(default, attributes(convert))]
 struct MetaOpts {
+    default: bool,
     #[darling(multiple)]
     into: Vec<String>,
     #[darling(multiple)]
@@ -61,7 +62,7 @@ impl Fd {
         for opt in self.multi_opts.iter().filter(|o| o.class.eq(&name)) {
             return opt.clone();
         }
-        panic!("not found opts {:}", name)
+        panic!("not found class '{:}' convert_field", name)
     }
 }
 
@@ -99,12 +100,18 @@ impl DeriveIntoContext {
                 let source_name = Ident::new(&format!("{}", from), name.span());
 
                 let assigns = self.gen_from_assigns(from.clone().to_string());
-
+                let default_code = if self.attrs.default {
+                    quote!{..#struct_name::default()}
+                }else {
+                    quote!()
+                };
                 quote! {
                         impl std::convert::From<#source_name> for #struct_name {
                             fn from(s: #source_name) -> Self {
                                 #struct_name {
                                 #(#assigns)*
+
+                                #default_code
                             }
                         }
                     }
@@ -119,11 +126,19 @@ impl DeriveIntoContext {
                 let target_name = Ident::new(&format!("{}", into), name.span());
                 let assigns = self.gen_into_assigns(into.clone().to_string());
 
+                let default_code = if self.attrs.default {
+                    quote!{..#struct_name::default()}
+                }else {
+                    quote!()
+                };
+
                 quote! {
                     impl std::convert::Into<#target_name> for #struct_name {
                         fn into(self) -> #target_name {
                             #target_name {
                                 #(#assigns)*
+
+                                #default_code
                             }
                         }
                     }
@@ -168,10 +183,14 @@ impl DeriveIntoContext {
                         };
                     }
 
+                    if self.attrs.default && opts.ignore {
+                        return quote!();
+                    }
+
                     if optional && opts.ignore {
-                        return quote!(
+                        return quote!{
                             #name: None,
-                        );
+                        };
                     }
 
                     if opts.unwrap {
