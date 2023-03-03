@@ -91,8 +91,9 @@ impl DeriveIntoContext {
     pub fn render(&self) -> TokenStream {
         let name = &self.name;
         let is_from = !self.attrs.from.is_empty();
+        let is_into = !self.attrs.into.is_empty();
 
-        if is_from {
+        let from_code = if is_from {
             TokenStream::from_iter(self.attrs.from.iter().map(|from| {
                 let struct_name = Ident::new(&format!("{}", name), name.span());
                 let source_name = Ident::new(&format!("{}", from), name.span());
@@ -111,23 +112,31 @@ impl DeriveIntoContext {
                 }
             }))
         } else {
+            quote!()
+        }; 
+        let into_code = if is_into {
             TokenStream::from_iter(self.attrs.into.iter().map(|into| {
                 let struct_name = Ident::new(&format!("{}", name), name.span());
                 let target_name = Ident::new(&format!("{}", into), name.span());
                 let assigns = self.gen_into_assigns(into.clone().to_string());
 
                 quote! {
-                    impl std::convert::From<#struct_name> for #target_name {
-                        fn from(s: #struct_name) -> Self {
+                    impl std::convert::Into<#target_name> for #struct_name {
+                        fn into(self) -> #target_name {
                             #target_name {
                                 #(#assigns)*
-                                ..#target_name::default()
                             }
                         }
                     }
                 }
             }))
-        }
+        } else {
+            quote!()
+        };
+        quote!(
+            #from_code
+            #into_code
+        )
     }
 
     fn gen_from_assigns(&self, sturct_name: String) -> Vec<TokenStream> {
@@ -224,7 +233,7 @@ impl DeriveIntoContext {
                     if !opts.custom_fn.is_empty() {
                         let custom = Ident::new(&opts.custom_fn.as_str(), name.span());
                         return quote! {
-                            #target_name: #custom(&s),
+                            #target_name: #custom(&self),
                         };
                     }
 
@@ -234,36 +243,36 @@ impl DeriveIntoContext {
 
                     if optional && opts.unwrap {
                         return quote! {
-                            #target_name: s.#name.unwrap_or_default(),
+                            #target_name: self.#name.unwrap_or_default(),
                         };
                     }
 
                     if opts.option {
                         if optional {
                             return quote! {
-                                #target_name: s.#name,
+                                #target_name: self.#name,
                             };
                         } else {
                             return quote! {
-                                #target_name: Some(s.#name),
+                                #target_name: Some(self.#name),
                             };
                         }
                     }
 
                     if opts.to_string {
                         return quote! {
-                            #target_name: s.#name.to_string(),
+                            #target_name: self.#name.to_string(),
                         };
                     }
 
                     if is_vec {
                         return quote! {
-                            #target_name: s.#name.into_iter().map(|a| a.into()).collect(),
+                            #target_name: self.#name.into_iter().map(|a| a.into()).collect(),
                         };
                     }
 
                     quote! {
-                        #target_name: s.#name.into(),
+                        #target_name: self.#name.into(),
                     }
                 },
             )

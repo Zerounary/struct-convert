@@ -8,6 +8,7 @@ pub fn attr_into2(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let context = auto_from::DeriveIntoContext::from(input);
     let out: TokenStream = context.render().into();
+    println!("{:#?}", out.to_string());
     out
 }
 
