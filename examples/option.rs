@@ -1,11 +1,11 @@
 use struct_convert::Convert;
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, PartialEq)]
 struct BInner {
     name: String,
 }
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, PartialEq)]
 struct B {
     name: String,
     name2: String,
@@ -13,7 +13,7 @@ struct B {
     opt_str2: Option<String>,
 }
 
-#[derive(Debug, Default, Convert, PartialEq)]
+#[derive(Debug, Convert, PartialEq)]
 #[convert(into = "B")]
 struct A {
     #[convert_field(unwrap)]
@@ -29,13 +29,17 @@ struct A {
     opt_str2: Option<String>,
 }
 
-#[derive(Debug, Default, Convert, PartialEq)]
+#[derive(Debug, Convert, PartialEq)]
 #[convert(into = "BInner")]
 struct AInner {
     name: String,
 }
 
 fn main() {
+}
+
+#[test]
+fn test_option() {
     let a = A {
         name: Some("Jack".to_string()),
         opt_str: String::from("str"),

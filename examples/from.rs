@@ -1,12 +1,12 @@
 use struct_convert::Convert;
 
-#[derive(Debug, Default, Convert, PartialEq)]
+#[derive(Debug, Convert, PartialEq)]
 #[convert(from = "AInner")]
 struct BInner {
     name: String,
 }
 
-#[derive(Debug, Default, Convert, PartialEq)]
+#[derive(Debug, Convert, PartialEq)]
 #[convert(from = "A")]
 struct B {
 
@@ -32,7 +32,7 @@ struct B {
     other_field: Option<String>,
 }
 
-#[derive(Debug, Default,  PartialEq)]
+#[derive(Debug,  PartialEq)]
 struct A {
     ignore_f: i64,
     id: i64,
@@ -45,12 +45,16 @@ struct A {
 }
 
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, PartialEq)]
 struct AInner {
     name: String,
 }
 
 fn main() {
+}
+
+#[test]
+fn test_from() {
     let a = A {
         id: 2,
         num: 1,

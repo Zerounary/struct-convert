@@ -2,12 +2,12 @@ use std::time::Instant;
 
 use struct_convert::Convert;
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, PartialEq)]
 struct BInner {
     name: String,
 }
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, PartialEq)]
 struct B {
     bid: i64,
     num: String,
@@ -19,7 +19,7 @@ struct B {
     opt_str2: Option<String>,
 }
 
-#[derive(Debug, Default, Convert, PartialEq)]
+#[derive(Debug, Convert, PartialEq)]
 #[convert(into = "B")]
 struct A {
     #[convert_field(ignore)]
@@ -45,7 +45,7 @@ struct A {
     opt_str2: Option<String>,
 }
 
-#[derive(Debug, Default, Clone, Convert, PartialEq)]
+#[derive(Debug, Clone, Convert, PartialEq)]
 #[convert(into = "BInner")]
 struct AInner {
     name: String,

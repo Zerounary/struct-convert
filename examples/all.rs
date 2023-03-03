@@ -1,11 +1,11 @@
 use struct_convert::Convert;
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, PartialEq)]
 struct BInner {
     name: String,
 }
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, PartialEq)]
 struct B {
     bid: i64,
     num: String,
@@ -17,7 +17,7 @@ struct B {
     opt_str2: Option<String>
 }
 
-#[derive(Debug, Default, Convert, PartialEq)]
+#[derive(Debug, Convert, PartialEq)]
 #[convert(into = "B")]
 struct A {
 
@@ -46,14 +46,18 @@ struct A {
     
 }
 
-#[derive(Debug, Default, Convert, PartialEq)]
+#[derive(Debug, Convert, PartialEq)]
 #[convert(into = "BInner")]
 struct AInner {
     name: String,
 }
 
 fn main() {
-    let a = A {
+}
+
+#[test]
+fn test_all() {
+        let a = A {
         id: 2,
         num: 1,
         name: Some("Jack".to_string()),

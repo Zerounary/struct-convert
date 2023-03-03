@@ -2,7 +2,7 @@ use struct_convert::Convert;
 
 use crate::some_mod::Remote;
 
-#[derive(Default, Convert)]
+#[derive(Convert)]
 #[convert(from = "Remote")]
 #[convert(from = "C")]
 #[convert(into = "B")]
@@ -25,6 +25,10 @@ mod some_mod {
 }
 
 fn main() {
+}
+
+#[test]
+fn test_proxy() {
     let c = C { value: 8 };
     let a: A = c.into();
     let b: B = a.into();

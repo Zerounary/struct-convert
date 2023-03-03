@@ -1,13 +1,13 @@
 use struct_convert::Convert;
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, PartialEq)]
 struct B {
     bid: i64,
     num: String,
     name: String,
 }
 
-#[derive(Debug, Default, Convert, PartialEq)]
+#[derive(Debug, Convert, PartialEq)]
 #[convert(into = "B")]
 struct A {
     #[convert_field(rename = "bid")]
@@ -21,6 +21,10 @@ struct A {
 }
 
 fn main() {
+}
+
+#[test]
+fn test_sample() {
     let a = A {
         id: 2,
         num: 1,

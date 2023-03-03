@@ -1,12 +1,12 @@
 use struct_convert::Convert;
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, PartialEq)]
 struct B {
     num: String,
     name: String,
 }
 
-#[derive(Debug, Default, Convert, PartialEq)]
+#[derive(Debug, Convert, PartialEq)]
 #[convert(into = "B")]
 struct A {
     #[convert_field(ignore)]
@@ -20,6 +20,10 @@ struct A {
 }
 
 fn main() {
+}
+
+#[test]
+fn test_ignore() {
     let a = A {
         id: 2,
         num: 1,

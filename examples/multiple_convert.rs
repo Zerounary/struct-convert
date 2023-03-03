@@ -1,20 +1,20 @@
 use struct_convert::Convert;
 
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 struct B {
     bid: String,
     num: String,
     name: String,
 }
 
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 struct C {
     cid: Option<String>,
     num: String,
     name: String,
 }
 
-#[derive(Debug, Default, Clone, Convert, PartialEq)]
+#[derive(Debug, Clone, Convert, PartialEq)]
 #[convert(into = "B")]
 #[convert(into = "C")]
 struct A {
@@ -29,7 +29,7 @@ struct A {
     name: Option<String>,
 }
 
-#[derive(Debug, Default, Clone, Convert, PartialEq)]
+#[derive(Debug, Clone, Convert, PartialEq)]
 #[convert(from = "B")]
 #[convert(from = "C")]
 struct D {
@@ -53,6 +53,10 @@ fn wrap_id(a: &A) -> Option<String> {
 }
 
 fn main() {
+}
+
+#[test]
+fn test_multiple_convert() {
     let a = A {
         id: 2,
         num: 1,
