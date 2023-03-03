@@ -105,7 +105,6 @@ impl DeriveIntoContext {
                             fn from(s: #source_name) -> Self {
                                 #struct_name {
                                 #(#assigns)*
-                                ..#struct_name::default()
                             }
                         }
                     }
@@ -169,8 +168,10 @@ impl DeriveIntoContext {
                         };
                     }
 
-                    if opts.ignore {
-                        return quote!();
+                    if optional && opts.ignore {
+                        return quote!(
+                            #name: None,
+                        );
                     }
 
                     if opts.unwrap {
