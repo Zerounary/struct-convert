@@ -50,6 +50,7 @@ struct Vo {
     name: Option<String>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 struct Bo {
     name: String,
 }
@@ -113,4 +114,13 @@ fn test_multiple_convert() {
         },
         d
     );
+
+    let vo: Vo = Vo { name: Some("vo".to_string()) };
+    let bo: Bo = vo.into();
+    debug_assert_eq!(Bo{ name: "vo".to_string() }, bo);
+    let vo2: Vo = bo.into();
+    debug_assert_eq!(Vo{ name: Some("vo".to_string()) }, vo2);
+
+
+
 }
