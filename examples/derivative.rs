@@ -9,7 +9,7 @@ use time::OffsetDateTime;
 struct SomeStruct {
     name: String,
     #[derivative(Default(value = "OffsetDateTime::now_utc()"))]
-    #[convert_field(class="A", ignore)]
+    #[convert_field(from="A", ignore)]
     at: OffsetDateTime,
 }
 

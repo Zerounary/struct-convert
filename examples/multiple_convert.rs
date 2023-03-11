@@ -18,8 +18,8 @@ struct C {
 #[convert(into = "B")]
 #[convert(into = "C")]
 struct A {
-    #[convert_field(class = "B", rename = "bid", to_string)]
-    #[convert_field(class = "C", rename = "cid", custom_fn = "wrap_id")]
+    #[convert_field(into = "B", rename = "bid", to_string)]
+    #[convert_field(into = "C", rename = "cid", custom_fn = "wrap_id")]
     id: i64,
 
     #[convert_field(to_string)]
@@ -34,10 +34,24 @@ struct A {
 #[convert(from = "C")]
 struct D {
 
-    #[convert_field(class = "B", rename = "bid", custom_fn = "to_i64")]
-    #[convert_field(class = "C", rename = "cid", custom_fn = "from_cid")]
+    #[convert_field(from = "B", rename = "bid", custom_fn = "to_i64")]
+    #[convert_field(from = "C", rename = "cid", custom_fn = "from_cid")]
     id: i64,
     name: Option<String>,
+}
+
+#[derive(Debug, Clone, Convert, PartialEq)]
+#[convert(into = "Bo")]
+#[convert(from = "Bo")]
+struct Vo {
+
+    #[convert_field(into = "Bo", unwrap )]
+    #[convert_field(from = "Bo", wrap)]
+    name: Option<String>,
+}
+
+struct Bo {
+    name: String,
 }
 
 fn to_i64(b: &B) -> i64 {
