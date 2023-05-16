@@ -11,6 +11,7 @@ struct B {
     name2: String,
     opt_str: Option<String>,
     opt_str2: Option<String>,
+    opt_inner: Option<BInner>,
 }
 
 #[derive(Debug, Convert, PartialEq)]
@@ -27,6 +28,8 @@ struct A {
 
     #[convert_field(option)]
     opt_str2: Option<String>,
+
+    opt_inner: Option<AInner>,
 }
 
 #[derive(Debug, Convert, PartialEq)]
@@ -35,8 +38,7 @@ struct AInner {
     name: String,
 }
 
-fn main() {
-}
+fn main() {}
 
 #[test]
 fn test_option() {
@@ -44,6 +46,9 @@ fn test_option() {
         name: Some("Jack".to_string()),
         opt_str: String::from("str"),
         opt_str2: Some(String::from("Option")),
+        opt_inner: Some(AInner {
+            name: "some inner".into(),
+        }),
         name2: None,
     };
     let b: B = a.into();
@@ -52,6 +57,9 @@ fn test_option() {
             name: "Jack".to_string(),
             opt_str: Some(String::from("str")),
             opt_str2: Some(String::from("Option")),
+            opt_inner: Some(BInner {
+                name: "some inner".into(),
+            }),
             name2: "".to_string()
         },
         b

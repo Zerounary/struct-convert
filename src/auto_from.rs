@@ -1,10 +1,10 @@
-use darling::{FromDeriveInput, FromField, FromAttributes};
+use darling::{FromAttributes, FromDeriveInput, FromField, ToTokens};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
 use syn::{
-    Data, DataStruct, DeriveInput, Field, Fields, FieldsNamed, GenericArgument, Path, Type,
-    TypePath, Attribute,
+    Attribute, Data, DataStruct, DeriveInput, Field, Fields, FieldsNamed, GenericArgument, Path,
+    Type, TypePath,
 };
 
 #[derive(Debug, Default, FromDeriveInput)]
@@ -12,9 +12,9 @@ use syn::{
 struct MetaOpts {
     default: bool,
     #[darling(multiple)]
-    into: Vec<String>,
+    into: Vec<Path>,
     #[darling(multiple)]
-    from: Vec<String>,
+    from: Vec<Path>,
 }
 
 #[derive(Debug, Default, Clone, FromField, FromAttributes)]
@@ -43,7 +43,7 @@ struct Fd {
 /// 把一个 Field 转换成 Fd
 impl From<Field> for Fd {
     fn from(f: Field) -> Self {
-        let (optional, is_vec ,_) = get_option_inner(&f.ty);
+        let (optional, is_vec, _) = get_option_inner(&f.ty);
         let opts = FiledOpts::from_field(&f).unwrap_or_default();
         let multi_opts = parse_attrs(&f.attrs);
         Self {
@@ -53,7 +53,7 @@ impl From<Field> for Fd {
             is_vec,
             opts,
             multi_opts,
-            multiple: f.attrs.len() > 1
+            multiple: f.attrs.len() > 1,
         }
     }
 }
@@ -71,12 +71,12 @@ impl Fd {
                 for opt in self.multi_opts.iter().filter(|o| o.from.eq(&name)) {
                     return opt.clone();
                 }
-            },
+            }
             FieldClass::Into(name) => {
                 for opt in self.multi_opts.iter().filter(|o| o.into.eq(&name)) {
                     return opt.clone();
                 }
-            },
+            }
         };
         panic!("not found class '{:?}' convert_field", field_class)
     }
@@ -84,11 +84,14 @@ impl Fd {
 
 fn parse_attrs(attrs: &[Attribute]) -> Vec<FiledOpts> {
     let mut result = vec![];
-    for attr in attrs.iter().filter(|attr| attr.path.is_ident("convert_field")) {
+    for attr in attrs
+        .iter()
+        .filter(|attr| attr.path.is_ident("convert_field"))
+    {
         match FiledOpts::from_attributes(&[attr.clone().into()]) {
             Ok(f) => {
                 result.push(f);
-            },
+            }
             Err(e) => {
                 panic!("{:?}", e)
             }
@@ -113,12 +116,12 @@ impl DeriveIntoContext {
         let from_code = if is_from {
             TokenStream::from_iter(self.attrs.from.iter().map(|from| {
                 let struct_name = Ident::new(&format!("{}", name), name.span());
-                let source_name = Ident::new(&format!("{}", from), name.span());
+                let source_name = from;
+                let assigns = self.gen_from_assigns(from.to_token_stream().to_string());
 
-                let assigns = self.gen_from_assigns(from.clone().to_string());
                 let default_code = if self.attrs.default {
-                    quote!{..#struct_name::default()}
-                }else {
+                    quote! {..#struct_name::default()}
+                } else {
                     quote!()
                 };
                 quote! {
@@ -135,16 +138,16 @@ impl DeriveIntoContext {
             }))
         } else {
             quote!()
-        }; 
+        };
         let into_code = if is_into {
             TokenStream::from_iter(self.attrs.into.iter().map(|into| {
                 let struct_name = Ident::new(&format!("{}", name), name.span());
-                let target_name = Ident::new(&format!("{}", into), name.span());
-                let assigns = self.gen_into_assigns(into.clone().to_string());
+                let target_name = into;
+                let assigns = self.gen_into_assigns(into.to_token_stream().to_string());
 
                 let default_code = if self.attrs.default {
-                    quote!{..#struct_name::default()}
-                }else {
+                    quote! {..#target_name::default()}
+                } else {
                     quote!()
                 };
 
@@ -173,71 +176,75 @@ impl DeriveIntoContext {
         self.fields
             .clone()
             .into_iter()
-            .map(
-                |fd| {
-                    let Fd {
-                        name,
-                        optional,
-                        is_vec,
-                        mut opts,
-                        multiple,
-                        ..
-                    } = fd.clone();
-                    if multiple {
-                        opts = fd.get_by_name(FieldClass::From(sturct_name.clone()));
-                    }
-                    let source_name: Ident = if opts.rename.is_empty() {
-                        name.clone()
-                    } else {
-                        Ident::new(opts.rename.as_str(), name.span())
+            .map(|fd| {
+                let Fd {
+                    name,
+                    optional,
+                    is_vec,
+                    mut opts,
+                    multiple,
+                    ..
+                } = fd.clone();
+                if multiple {
+                    opts = fd.get_by_name(FieldClass::From(sturct_name.clone()));
+                }
+                let source_name: Ident = if opts.rename.is_empty() {
+                    name.clone()
+                } else {
+                    Ident::new(opts.rename.as_str(), name.span())
+                };
+
+                if !opts.custom_fn.is_empty() {
+                    let custom = Ident::new(&opts.custom_fn.as_str(), name.span());
+                    return quote! {
+                        #name: #custom(&s),
                     };
+                }
 
-                    if !opts.custom_fn.is_empty() {
-                        let custom = Ident::new(&opts.custom_fn.as_str(), name.span());
-                        return quote! {
-                            #name: #custom(&s),
-                        };
-                    }
+                if self.attrs.default && opts.ignore {
+                    return quote!();
+                }
 
-                    if self.attrs.default && opts.ignore {
-                        return quote!();
-                    }
+                if optional && opts.ignore {
+                    return quote! {
+                        #name: None,
+                    };
+                }
 
-                    if optional && opts.ignore {
-                        return quote!{
-                            #name: None,
-                        };
-                    }
+                if opts.unwrap {
+                    return quote! {
+                        #name: s.#source_name.unwrap_or_default(),
+                    };
+                }
 
-                    if opts.unwrap {
-                        return quote! {
-                            #name: s.#source_name.unwrap_or_default(),
-                        };
-                    }
+                if optional && opts.wrap {
+                    return quote! {
+                        #name: Some(s.#source_name),
+                    };
+                }
 
-                    if optional && opts.wrap {
-                        return quote! {
-                            #name: Some(s.#source_name),
-                        };
-                    }
+                if optional {
+                    return quote! {
+                        #name: s.#source_name.map(Into::into),
+                    };
+                }
 
-                    if opts.to_string {
-                        return quote! {
-                            #name: s.#source_name.to_string(),
-                        };
-                    }
+                if opts.to_string {
+                    return quote! {
+                        #name: s.#source_name.to_string(),
+                    };
+                }
 
-                    if is_vec {
-                        return quote! {
-                            #name: s.#source_name.into_iter().map(|a| a.into()).collect(),
-                        };
-                    }
+                if is_vec {
+                    return quote! {
+                        #name: s.#source_name.into_iter().map(|a| a.into()).collect(),
+                    };
+                }
 
-                    quote! {
-                        #name: s.#source_name.into(),
-                    }
-                },
-            )
+                quote! {
+                    #name: s.#source_name.into(),
+                }
+            })
             .collect()
     }
 
@@ -246,72 +253,76 @@ impl DeriveIntoContext {
         self.fields
             .clone()
             .into_iter()
-            .map(
-                |fd| {
-                    let Fd {
-                        name,
-                        optional,
-                        is_vec,
-                        mut opts,
-                        multiple,
-                        ..
-                    } = fd.clone();
+            .map(|fd| {
+                let Fd {
+                    name,
+                    optional,
+                    is_vec,
+                    mut opts,
+                    multiple,
+                    ..
+                } = fd.clone();
 
-                    if multiple {
-                        opts = fd.get_by_name(FieldClass::Into(struct_name.clone()));
-                    }
-                    let target_name: Ident = if opts.rename.is_empty() {
-                        name.clone()
-                    } else {
-                        Ident::new(opts.rename.as_str(), name.span())
+                if multiple {
+                    opts = fd.get_by_name(FieldClass::Into(struct_name.clone()));
+                }
+                let target_name: Ident = if opts.rename.is_empty() {
+                    name.clone()
+                } else {
+                    Ident::new(opts.rename.as_str(), name.span())
+                };
+
+                if !opts.custom_fn.is_empty() {
+                    let custom = Ident::new(&opts.custom_fn.as_str(), name.span());
+                    return quote! {
+                        #target_name: #custom(&self),
                     };
+                }
 
-                    if !opts.custom_fn.is_empty() {
-                        let custom = Ident::new(&opts.custom_fn.as_str(), name.span());
+                if opts.ignore {
+                    return quote!();
+                }
+
+                if optional && opts.unwrap {
+                    return quote! {
+                        #target_name: self.#name.unwrap_or_default(),
+                    };
+                }
+
+                if opts.option {
+                    if optional {
                         return quote! {
-                            #target_name: #custom(&self),
+                            #target_name: self.#name,
+                        };
+                    } else {
+                        return quote! {
+                            #target_name: Some(self.#name),
                         };
                     }
+                }
 
-                    if opts.ignore {
-                        return quote!();
-                    }
+                if optional {
+                    return quote! {
+                        #target_name: self.#name.map(Into::into),
+                    };
+                }
 
-                    if optional && opts.unwrap {
-                        return quote! {
-                            #target_name: self.#name.unwrap_or_default(),
-                        };
-                    }
+                if opts.to_string {
+                    return quote! {
+                        #target_name: self.#name.to_string(),
+                    };
+                }
 
-                    if opts.option {
-                        if optional {
-                            return quote! {
-                                #target_name: self.#name,
-                            };
-                        } else {
-                            return quote! {
-                                #target_name: Some(self.#name),
-                            };
-                        }
-                    }
+                if is_vec {
+                    return quote! {
+                        #target_name: self.#name.into_iter().map(|a| a.into()).collect(),
+                    };
+                }
 
-                    if opts.to_string {
-                        return quote! {
-                            #target_name: self.#name.to_string(),
-                        };
-                    }
-
-                    if is_vec {
-                        return quote! {
-                            #target_name: self.#name.into_iter().map(|a| a.into()).collect(),
-                        };
-                    }
-
-                    quote! {
-                        #target_name: self.#name.into(),
-                    }
-                },
-            )
+                quote! {
+                    #target_name: self.#name.into(),
+                }
+            })
             .collect()
     }
 }
