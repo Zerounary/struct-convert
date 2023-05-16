@@ -223,6 +223,12 @@ impl DeriveIntoContext {
                     };
                 }
 
+                if optional {
+                    return quote! {
+                        #name: s.#source_name.map(Into::into),
+                    };
+                }
+
                 if opts.to_string {
                     return quote! {
                         #name: s.#source_name.to_string(),
