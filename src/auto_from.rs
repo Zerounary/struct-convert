@@ -146,7 +146,7 @@ impl DeriveIntoContext {
                 let assigns = self.gen_into_assigns(into.to_token_stream().to_string());
 
                 let default_code = if self.attrs.default {
-                    quote! {..#struct_name::default()}
+                    quote! {..#target_name::default()}
                 } else {
                     quote!()
                 };
