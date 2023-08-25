@@ -37,6 +37,7 @@ struct D {
     #[convert_field(from = "B", rename = "bid", custom_fn = "to_i64")]
     #[convert_field(from = "C", rename = "cid", custom_fn = "from_cid")]
     id: i64,
+    #[convert_field(wrap)]
     name: Option<String>,
 }
 
