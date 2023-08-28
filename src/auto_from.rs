@@ -68,12 +68,12 @@ impl Fd {
     fn get_by_name(&self, field_class: FieldClass) -> FiledOpts {
         match field_class.clone() {
             FieldClass::From(name) => {
-                if let Some(opt) = self.multi_opts.iter().find(|o| o.from.split_whitespace().collect::<String>().eq(&name.split_whitespace().collect::<String>())) {
+                for opt in self.multi_opts.iter().filter(|o| o.from.eq(&name)) {
                     return opt.clone();
                 }
             }
             FieldClass::Into(name) => {
-                if let Some(opt) = self.multi_opts.iter().find(|o| o.into.split_whitespace().collect::<String>().eq(&name.split_whitespace().collect::<String>())) {
+                for opt in self.multi_opts.iter().filter(|o| o.into.eq(&name)) {
                     return opt.clone();
                 }
             }
