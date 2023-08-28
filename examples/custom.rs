@@ -27,7 +27,6 @@ struct D {
 #[derive(Debug, Convert, PartialEq)]
 #[convert(from = "D")]
 struct E {
-    // #[convert_field(unwrap)]
     str: String,
     #[convert_field(rename = "bid", custom_fn = "to_point_from_d")]
     point: Point
