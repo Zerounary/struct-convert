@@ -26,8 +26,7 @@ struct AInner {
     name: String,
 }
 
-fn main() {
-}
+fn main() {}
 
 #[test]
 fn test_inner() {

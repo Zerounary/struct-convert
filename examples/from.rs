@@ -9,7 +9,6 @@ struct BInner {
 #[derive(Debug, Convert, PartialEq)]
 #[convert(from = "A")]
 struct B {
-
     #[convert_field(rename = "id")]
     bid: i64,
 
@@ -32,7 +31,7 @@ struct B {
     other_field: Option<String>,
 }
 
-#[derive(Debug,  PartialEq)]
+#[derive(Debug, PartialEq)]
 struct A {
     ignore_f: i64,
     id: i64,
@@ -44,14 +43,12 @@ struct A {
     opt_str2: Option<String>,
 }
 
-
 #[derive(Debug, PartialEq)]
 struct AInner {
     name: String,
 }
 
-fn main() {
-}
+fn main() {}
 
 #[test]
 fn test_from() {

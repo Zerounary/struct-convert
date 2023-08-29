@@ -14,13 +14,12 @@ struct B {
     innerList: Vec<BInner>,
 
     opt_str: Option<String>,
-    opt_str2: Option<String>
+    opt_str2: Option<String>,
 }
 
 #[derive(Debug, Convert, PartialEq)]
 #[convert(into = "B")]
 struct A {
-
     #[convert_field(ignore)]
     ignore_f: i64,
 
@@ -42,8 +41,6 @@ struct A {
 
     #[convert_field(option)]
     opt_str2: Option<String>,
-
-    
 }
 
 #[derive(Debug, Convert, PartialEq)]
@@ -52,12 +49,11 @@ struct AInner {
     name: String,
 }
 
-fn main() {
-}
+fn main() {}
 
 #[test]
 fn test_all() {
-        let a = A {
+    let a = A {
         id: 2,
         num: 1,
         name: Some("Jack".to_string()),

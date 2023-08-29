@@ -9,7 +9,7 @@ use time::OffsetDateTime;
 struct SomeStruct {
     name: String,
     #[derivative(Default(value = "OffsetDateTime::now_utc()"))]
-    #[convert_field(from="A", ignore)]
+    #[convert_field(from = "A", ignore)]
     at: OffsetDateTime,
 }
 
@@ -18,8 +18,8 @@ struct A {
 }
 
 fn main() {
-    let a = A{
-        name: "A".to_string()
+    let a = A {
+        name: "A".to_string(),
     };
     let ss: SomeStruct = a.into();
     println!("{:?}", ss);

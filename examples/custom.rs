@@ -1,11 +1,11 @@
 use struct_convert::Convert;
 
-#[derive(Debug,  PartialEq)]
+#[derive(Debug, PartialEq)]
 struct B {
     bid: i64,
 }
 
-#[derive(Debug,  Convert, PartialEq)]
+#[derive(Debug, Convert, PartialEq)]
 #[convert(into = "B")]
 struct A {
     #[convert_field(rename = "bid", custom_fn = "str_to_i64")]
@@ -29,11 +29,10 @@ struct D {
 struct E {
     str: String,
     #[convert_field(rename = "bid", custom_fn = "to_point_from_d")]
-    point: Point
-
+    point: Point,
 }
 
-#[derive(Debug,  PartialEq)]
+#[derive(Debug, PartialEq)]
 struct Point(i64, i64);
 
 fn str_to_i64(a: &A) -> i64 {
@@ -41,17 +40,14 @@ fn str_to_i64(a: &A) -> i64 {
 }
 
 fn to_point(b: &B) -> Point {
-  Point(b.bid, b.bid)
+    Point(b.bid, b.bid)
 }
 
 fn to_point_from_d(d: &D) -> Point {
     Point(d.bid, d.bid)
 }
 
-
-fn main() {
-
-}
+fn main() {}
 
 #[test]
 fn test_custom() {
@@ -61,7 +57,16 @@ fn test_custom() {
     let c: C = b.into();
     debug_assert_eq!(C { point: Point(4, 4) }, c);
 
-    let d = D { str: "str".into(), bid: 42 };
+    let d = D {
+        str: "str".into(),
+        bid: 42,
+    };
     let e: E = d.into();
-    debug_assert_eq!(E { str: "str".into(), point: Point(42, 42) }, e);
+    debug_assert_eq!(
+        E {
+            str: "str".into(),
+            point: Point(42, 42)
+        },
+        e
+    );
 }

@@ -35,4 +35,3 @@ fn test_proxy() {
     let a2: A = r.into();
     debug_assert_eq!(7, a2.value);
 }
-

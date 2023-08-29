@@ -19,8 +19,7 @@ struct A {
     name: Option<String>,
 }
 
-fn main() {
-}
+fn main() {}
 
 #[test]
 fn test_ignore() {

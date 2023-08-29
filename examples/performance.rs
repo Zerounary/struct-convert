@@ -62,14 +62,12 @@ struct AInner {
 //         // innerList: s.innerList.into(), //err
 //         // innerList: to_list(&s), //err
 //         ..B::default()
-//        } 
+//        }
 //     }
 // }
 
-
-
 fn to_list(a: &A) -> Vec<BInner> {
-  return vec![]
+    return vec![];
 }
 
 fn main() {

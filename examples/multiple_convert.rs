@@ -33,7 +33,6 @@ struct A {
 #[convert(from = "B")]
 #[convert(from = "C")]
 struct D {
-
     #[convert_field(from = "B", rename = "bid", custom_fn = "to_i64")]
     #[convert_field(from = "C", rename = "cid", custom_fn = "from_cid")]
     id: i64,
@@ -45,8 +44,7 @@ struct D {
 #[convert(into = "Bo")]
 #[convert(from = "Bo")]
 struct Vo {
-
-    #[convert_field(into = "Bo", unwrap )]
+    #[convert_field(into = "Bo", unwrap)]
     #[convert_field(from = "Bo", wrap)]
     name: Option<String>,
 }
@@ -68,8 +66,7 @@ fn wrap_id(a: &A) -> Option<String> {
     Some(a.id.to_string())
 }
 
-fn main() {
-}
+fn main() {}
 
 #[test]
 fn test_multiple_convert() {
@@ -116,12 +113,21 @@ fn test_multiple_convert() {
         d
     );
 
-    let vo: Vo = Vo { name: Some("vo".to_string()) };
+    let vo: Vo = Vo {
+        name: Some("vo".to_string()),
+    };
     let bo: Bo = vo.into();
-    debug_assert_eq!(Bo{ name: "vo".to_string() }, bo);
+    debug_assert_eq!(
+        Bo {
+            name: "vo".to_string()
+        },
+        bo
+    );
     let vo2: Vo = bo.into();
-    debug_assert_eq!(Vo{ name: Some("vo".to_string()) }, vo2);
-
-
-
+    debug_assert_eq!(
+        Vo {
+            name: Some("vo".to_string())
+        },
+        vo2
+    );
 }

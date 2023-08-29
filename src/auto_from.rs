@@ -45,7 +45,11 @@ impl From<Field> for Fd {
     fn from(f: Field) -> Self {
         let (optional, is_vec, _) = get_option_inner(&f.ty);
         let multi_opts = parse_attrs(&f.attrs);
-        let opts = multi_opts.iter().find(|f| f.from.is_empty() && f.into.is_empty()).map(Clone::clone).unwrap_or_default();
+        let opts = multi_opts
+            .iter()
+            .find(|f| f.from.is_empty() && f.into.is_empty())
+            .map(Clone::clone)
+            .unwrap_or_default();
         Self {
             // 此时，我们拿到的是 NamedFields，所以 ident 必然存在
             name: f.ident.unwrap(),
@@ -176,7 +180,12 @@ impl DeriveIntoContext {
         self.fields
             .clone()
             .into_iter()
-            .sorted_by_key(|fd| fd.get_by_name(FieldClass::From(struct_name.clone())).unwrap_or(fd.default_opts.clone()).custom_fn.is_empty())
+            .sorted_by_key(|fd| {
+                fd.get_by_name(FieldClass::From(struct_name.clone()))
+                    .unwrap_or(fd.default_opts.clone())
+                    .custom_fn
+                    .is_empty()
+            })
             .map(|fd| {
                 let Fd {
                     name,
@@ -185,7 +194,9 @@ impl DeriveIntoContext {
                     ..
                 } = fd.clone();
 
-                let opts = fd.get_by_name(FieldClass::From(struct_name.clone())).unwrap_or(fd.default_opts);
+                let opts = fd
+                    .get_by_name(FieldClass::From(struct_name.clone()))
+                    .unwrap_or(fd.default_opts);
 
                 let source_name: Ident = if opts.rename.is_empty() {
                     name.clone()
@@ -261,7 +272,9 @@ impl DeriveIntoContext {
                     ..
                 } = fd.clone();
 
-                let opts = fd.get_by_name(FieldClass::Into(struct_name.clone())).unwrap_or(fd.default_opts);
+                let opts = fd
+                    .get_by_name(FieldClass::Into(struct_name.clone()))
+                    .unwrap_or(fd.default_opts);
 
                 let target_name: Ident = if opts.rename.is_empty() {
                     name.clone()
