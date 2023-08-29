@@ -1,4 +1,5 @@
 use darling::{FromAttributes, FromDeriveInput, ToTokens};
+use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
@@ -118,8 +119,6 @@ impl DeriveIntoContext {
                 let source_name = from;
                 let assigns = self.gen_from_assigns(from.to_token_stream().to_string());
 
-
-
                 let default_code = if self.attrs.default {
                     quote! {..#struct_name::default()}
                 } else {
@@ -177,6 +176,7 @@ impl DeriveIntoContext {
         self.fields
             .clone()
             .into_iter()
+            .sorted_by_key(|fd| fd.get_by_name(FieldClass::From(struct_name.clone())).unwrap_or(fd.default_opts.clone()).custom_fn.is_empty())
             .map(|fd| {
                 let Fd {
                     name,
@@ -345,7 +345,6 @@ impl From<DeriveInput> for DeriveIntoContext {
         };
 
         let fds = fields.into_iter().map(Fd::from).collect();
-
         Self {
             name,
             fields: fds,
