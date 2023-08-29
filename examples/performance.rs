@@ -13,7 +13,7 @@ struct B {
     num: String,
     name: String,
     inner: BInner,
-    innerList: Vec<BInner>,
+    inner_list: Vec<BInner>,
 
     opt_str: Option<String>,
     opt_str2: Option<String>,
@@ -36,7 +36,7 @@ struct A {
 
     inner: AInner,
 
-    innerList: Vec<AInner>,
+    inner_list: Vec<AInner>,
 
     #[convert_field(option)]
     opt_str: String,
@@ -66,7 +66,7 @@ struct AInner {
 //     }
 // }
 
-fn to_list(a: &A) -> Vec<BInner> {
+fn to_list(_a: &A) -> Vec<BInner> {
     return vec![];
 }
 
@@ -81,7 +81,7 @@ fn main() {
             inner: AInner {
                 name: String::from("AInner"),
             },
-            innerList: vec![AInner {
+            inner_list: vec![AInner {
                 name: String::from("AInner"),
             }],
             opt_str: String::from("str"),
