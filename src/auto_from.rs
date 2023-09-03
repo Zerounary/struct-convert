@@ -1,11 +1,11 @@
 use darling::{FromAttributes, FromDeriveInput, ToTokens};
 use itertools::Itertools;
-use proc_macro2::{Ident, TokenStream};
-use quote::quote;
+use proc_macro2::{Ident, Span, TokenStream};
+use quote::{quote, quote_spanned};
 
 use syn::{
-    Attribute, Data, DataStruct, DeriveInput, Field, Fields, FieldsNamed, GenericArgument, Path,
-    Type, TypePath,
+    spanned::Spanned, Attribute, Data, DataStruct, DeriveInput, Expr, Field, Fields, FieldsNamed,
+    GenericArgument, Path, Type, TypePath,
 };
 
 #[derive(Debug, Default, FromDeriveInput)]
@@ -92,7 +92,7 @@ fn parse_attrs(attrs: &[Attribute]) -> Vec<FiledOpts> {
         .iter()
         .filter(|attr| attr.path.is_ident("convert_field"))
     {
-        match FiledOpts::from_attributes(&[attr.clone().into()]) {
+        match FiledOpts::from_attributes(&[attr.clone()]) {
             Ok(f) => {
                 result.push(f);
             }
@@ -130,7 +130,7 @@ impl DeriveIntoContext {
                 };
                 quote! {
                         impl std::convert::From<#source_name> for #struct_name {
-                            fn from(s: #source_name) -> Self {
+                            fn from(this: #source_name) -> Self {
                                 #struct_name {
                                 #(#assigns)*
 
@@ -158,6 +158,7 @@ impl DeriveIntoContext {
                 quote! {
                     impl std::convert::Into<#target_name> for #struct_name {
                         fn into(self) -> #target_name {
+                            let this = self;
                             #target_name {
                                 #(#assigns)*
 
@@ -205,9 +206,10 @@ impl DeriveIntoContext {
                 };
 
                 if !opts.custom_fn.is_empty() {
-                    let custom = Ident::new(&opts.custom_fn.as_str(), name.span());
+                    let custom_fn =
+                        parse_custom_fn_to_token_stream(opts.custom_fn.as_str(), name.span());
                     return quote! {
-                        #name: #custom(&s),
+                        #name: #custom_fn,
                     };
                 }
 
@@ -223,36 +225,36 @@ impl DeriveIntoContext {
 
                 if opts.unwrap {
                     return quote! {
-                        #name: s.#source_name.unwrap_or_default(),
+                        #name: this.#source_name.unwrap_or_default(),
                     };
                 }
 
                 if optional && opts.wrap {
                     return quote! {
-                        #name: Some(s.#source_name),
+                        #name: Some(this.#source_name),
                     };
                 }
 
                 if optional {
                     return quote! {
-                        #name: s.#source_name.map(Into::into),
+                        #name: this.#source_name.map(Into::into),
                     };
                 }
 
                 if opts.to_string {
                     return quote! {
-                        #name: s.#source_name.to_string(),
+                        #name: this.#source_name.to_string(),
                     };
                 }
 
                 if is_vec {
                     return quote! {
-                        #name: s.#source_name.into_iter().map(|a| a.into()).collect(),
+                        #name: this.#source_name.into_iter().map(|a| a.into()).collect(),
                     };
                 }
 
                 quote! {
-                    #name: s.#source_name.into(),
+                    #name: this.#source_name.into(),
                 }
             })
             .collect()
@@ -283,9 +285,10 @@ impl DeriveIntoContext {
                 };
 
                 if !opts.custom_fn.is_empty() {
-                    let custom = Ident::new(&opts.custom_fn.as_str(), name.span());
+                    let custom_fn =
+                        parse_custom_fn_to_token_stream(opts.custom_fn.as_str(), name.span());
                     return quote! {
-                        #target_name: #custom(&self),
+                        #target_name: #custom_fn,
                     };
                 }
 
@@ -295,42 +298,42 @@ impl DeriveIntoContext {
 
                 if optional && opts.unwrap {
                     return quote! {
-                        #target_name: self.#name.unwrap_or_default(),
+                        #target_name: this.#name.unwrap_or_default(),
                     };
                 }
 
                 if opts.option {
                     if optional {
                         return quote! {
-                            #target_name: self.#name,
+                            #target_name: this.#name,
                         };
                     } else {
                         return quote! {
-                            #target_name: Some(self.#name),
+                            #target_name: Some(this.#name),
                         };
                     }
                 }
 
                 if optional {
                     return quote! {
-                        #target_name: self.#name.map(Into::into),
+                        #target_name: this.#name.map(Into::into),
                     };
                 }
 
                 if opts.to_string {
                     return quote! {
-                        #target_name: self.#name.to_string(),
+                        #target_name: this.#name.to_string(),
                     };
                 }
 
                 if is_vec {
                     return quote! {
-                        #target_name: self.#name.into_iter().map(|a| a.into()).collect(),
+                        #target_name: this.#name.into_iter().map(|a| a.into()).collect(),
                     };
                 }
 
                 quote! {
-                    #target_name: self.#name.into(),
+                    #target_name: this.#name.into(),
                 }
             })
             .collect()
@@ -402,4 +405,20 @@ fn get_option_inner(ty: &Type) -> (bool, bool, &Type) {
         }
     }
     (false, false, ty)
+}
+
+fn parse_custom_fn_to_token_stream(custom_fn: &str, s: Span) -> TokenStream {
+    let ident = syn::parse_str::<Ident>(custom_fn);
+    if let Ok(_fn_) = ident {
+        return quote! { #_fn_(&this) };
+    }
+
+    let expr = syn::parse_str::<Expr>(custom_fn);
+    if let Ok(_expr_) = expr {
+        return quote! { #_expr_ };
+    }
+
+    quote_spanned! {
+        s.span() => compile_error!("custom_fn must be identifier or expression")
+    }
 }
