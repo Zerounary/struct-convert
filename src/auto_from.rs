@@ -71,12 +71,22 @@ impl Fd {
     fn get_by_name(&self, field_class: FieldClass) -> Option<FiledOpts> {
         match field_class.clone() {
             FieldClass::From(name) => {
-                if let Some(opt) = self.custom_opts.iter().find(|o| o.from.eq(&name)) {
+                if let Some(opt) = self.custom_opts.iter().find(|o| {
+                    o.from
+                        .split_whitespace()
+                        .collect::<String>()
+                        .eq(&name.split_whitespace().collect::<String>())
+                }) {
                     return Some(opt.clone());
                 }
             }
             FieldClass::Into(name) => {
-                if let Some(opt) = self.custom_opts.iter().find(|o| o.into.eq(&name)) {
+                if let Some(opt) = self.custom_opts.iter().find(|o| {
+                    o.into
+                        .split_whitespace()
+                        .collect::<String>()
+                        .eq(&name.split_whitespace().collect::<String>())
+                }) {
                     return Some(opt.clone());
                 }
             }
