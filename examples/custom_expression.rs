@@ -24,12 +24,29 @@ struct C {
     #[convert_field(custom_fn = "Object::new_with_name(&this.id)")]
     obj: Object,
 }
+// or
+#[derive(Debug, Convert, PartialEq)]
+#[convert(into = "C")]
+struct E {
+    id: String,
+    // Use `.` to access to the current field
+    #[convert_field(custom_fn = "Object::new_with_name(&.name)")]
+    obj: Object,
+}
 
 #[derive(Debug, Convert, PartialEq)]
 #[convert(into = "A")]
 struct D {
     // Use `this` to access to the current instance of the structure
     #[convert_field(custom_fn = "this.id.hex()")]
+    id: Uuuuuid,
+}
+// or
+#[derive(Debug, Convert, PartialEq)]
+#[convert(into = "A")]
+struct F {
+    // Use `.` to access to the current field
+    #[convert_field(custom_fn = ".hex()")]
     id: Uuuuuid,
 }
 

@@ -1,11 +1,13 @@
-use darling::{FromAttributes, FromDeriveInput, ToTokens};
+use darling::{util::SpannedValue, FromAttributes, FromDeriveInput, ToTokens};
 use itertools::Itertools;
-use proc_macro2::{Ident, Span, TokenStream};
+use proc_macro2::{Delimiter, Group, Ident, Punct, Spacing, Span, TokenStream, TokenTree};
 use quote::{quote, quote_spanned};
 
 use syn::{
-    spanned::Spanned, Attribute, Data, DataStruct, DeriveInput, Expr, Field, Fields, FieldsNamed,
-    GenericArgument, Path, Type, TypePath,
+    braced, bracketed, parenthesized,
+    parse::{Parse, ParseStream},
+    token, Attribute, Data, DataStruct, DeriveInput, Expr, Field, Fields, FieldsNamed,
+    GenericArgument, Path, Token, Type, TypePath,
 };
 
 #[derive(Debug, Default, FromDeriveInput)]
@@ -22,7 +24,7 @@ struct MetaOpts {
 #[darling(default, attributes(convert_field))]
 struct FiledOpts {
     rename: String,
-    custom_fn: String,
+    custom_fn: SpannedValue<String>,
     from: String,
     into: String,
     ignore: bool,
@@ -216,8 +218,11 @@ impl DeriveIntoContext {
                 };
 
                 if !opts.custom_fn.is_empty() {
-                    let custom_fn =
-                        parse_custom_fn_to_token_stream(opts.custom_fn.as_str(), name.span());
+                    let custom_fn = parse_custom_fn_to_token_stream(
+                        name.clone(),
+                        opts.custom_fn.as_str(),
+                        opts.custom_fn.span(),
+                    );
                     return quote! {
                         #name: #custom_fn,
                     };
@@ -295,8 +300,11 @@ impl DeriveIntoContext {
                 };
 
                 if !opts.custom_fn.is_empty() {
-                    let custom_fn =
-                        parse_custom_fn_to_token_stream(opts.custom_fn.as_str(), name.span());
+                    let custom_fn = parse_custom_fn_to_token_stream(
+                        name.clone(),
+                        opts.custom_fn.as_str(),
+                        opts.custom_fn.span(),
+                    );
                     return quote! {
                         #target_name: #custom_fn,
                     };
@@ -417,18 +425,98 @@ fn get_option_inner(ty: &Type) -> (bool, bool, &Type) {
     (false, false, ty)
 }
 
-fn parse_custom_fn_to_token_stream(custom_fn: &str, s: Span) -> TokenStream {
+fn parse_custom_fn_to_token_stream(field_name: Ident, custom_fn: &str, span: Span) -> TokenStream {
     let ident = syn::parse_str::<Ident>(custom_fn);
     if let Ok(_fn_) = ident {
-        return quote! { #_fn_(&this) };
+        return quote_spanned! { span => #_fn_(&this) };
     }
 
-    let expr = syn::parse_str::<Expr>(custom_fn);
-    if let Ok(_expr_) = expr {
-        return quote! { #_expr_ };
+    let expr = syn::parse_str::<CustomFnExpr>(&format!("{};{}", field_name, custom_fn));
+    match expr {
+        Ok(CustomFnExpr(_expr_)) => {
+            quote_spanned! { span => #_expr_ }
+        }
+        Err(e) => {
+            let e = e.to_string();
+            quote_spanned! { span => compile_error!(#e) }
+        }
     }
+}
 
-    quote_spanned! {
-        s.span() => compile_error!("custom_fn must be identifier or expression")
+struct CustomFnExpr(Expr);
+
+impl Parse for CustomFnExpr {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let field_name = input.parse()?;
+        input.parse::<Token![;]>()?;
+        let tt = parse_custom_fn_expr(field_name, input)?;
+        let expr = syn::parse2(tt)?;
+        Ok(Self(expr))
     }
+}
+
+fn parse_custom_fn_expr(field_name: Ident, input: ParseStream) -> syn::Result<TokenStream> {
+    let mut begin_expr = true;
+    let mut tokens = Vec::new();
+    while !input.is_empty() {
+        if begin_expr && input.peek(Token![.]) && input.peek2(syn::Ident) {
+            input.parse::<Token![.]>()?;
+            tokens.push(TokenTree::Ident(Ident::new("this", field_name.span())));
+            tokens.push(TokenTree::Punct(Punct::new('.', Spacing::Alone)));
+            tokens.push(TokenTree::Ident(field_name.clone()));
+            tokens.push(TokenTree::Punct(Punct::new('.', Spacing::Alone)));
+            begin_expr = false;
+            continue;
+        }
+
+        begin_expr = input.peek(Token![break])
+            || input.peek(Token![continue])
+            || input.peek(Token![if])
+            || input.peek(Token![in])
+            || input.peek(Token![match])
+            || input.peek(Token![mut])
+            || input.peek(Token![return])
+            || input.peek(Token![while])
+            || input.peek(Token![+])
+            || input.peek(Token![&])
+            || input.peek(Token![!])
+            || input.peek(Token![^])
+            || input.peek(Token![,])
+            || input.peek(Token![/])
+            || input.peek(Token![=])
+            || input.peek(Token![>])
+            || input.peek(Token![<])
+            || input.peek(Token![|])
+            || input.peek(Token![%])
+            || input.peek(Token![;])
+            || input.peek(Token![*])
+            || input.peek(Token![-]);
+
+        let token: TokenTree = if input.peek(token::Paren) {
+            let content;
+            let delimiter = parenthesized!(content in input);
+            let nested = parse_custom_fn_expr(field_name.clone(), &content)?;
+            let mut group = Group::new(Delimiter::Parenthesis, nested);
+            group.set_span(delimiter.span);
+            TokenTree::Group(group)
+        } else if input.peek(token::Brace) {
+            let content;
+            let delimiter = braced!(content in input);
+            let nested = parse_custom_fn_expr(field_name.clone(), &content)?;
+            let mut group = Group::new(Delimiter::Brace, nested);
+            group.set_span(delimiter.span);
+            TokenTree::Group(group)
+        } else if input.peek(token::Bracket) {
+            let content;
+            let delimiter = bracketed!(content in input);
+            let nested = parse_custom_fn_expr(field_name.clone(), &content)?;
+            let mut group = Group::new(Delimiter::Bracket, nested);
+            group.set_span(delimiter.span);
+            TokenTree::Group(group)
+        } else {
+            input.parse()?
+        };
+        tokens.push(token);
+    }
+    Ok(TokenStream::from_iter(tokens))
 }
